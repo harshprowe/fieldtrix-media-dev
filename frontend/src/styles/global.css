@@ -1,0 +1,418 @@
+:root {
+  color: #111827;
+  background: #f8fafc;
+  font-family:
+    Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.app-shell {
+  min-height: 100vh;
+}
+
+.app-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 20px 32px;
+  border-bottom: 1px solid #e5e7eb;
+  background: #ffffff;
+}
+
+.app-header h1 {
+  margin: 0;
+  font-size: 20px;
+  line-height: 1.2;
+}
+
+.app-kicker {
+  margin: 0 0 4px;
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.app-header nav {
+  display: flex;
+  gap: 8px;
+}
+
+.app-header nav a {
+  padding: 8px 10px;
+  border-radius: 6px;
+  color: #475569;
+  font-size: 14px;
+}
+
+.app-header nav a.active {
+  color: #111827;
+  background: #e5e7eb;
+}
+
+.app-main {
+  width: min(1120px, 100%);
+  margin: 0 auto;
+  padding: 32px;
+}
+
+.page-section {
+  display: grid;
+  gap: 20px;
+}
+
+.page-heading {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.page-heading h2 {
+  margin: 0;
+  font-size: 24px;
+}
+
+.page-heading p,
+.status-message {
+  margin: 0;
+  color: #64748b;
+}
+
+.status-panel {
+  padding: 16px;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  background: #fff1f2;
+}
+
+.status-panel h2 {
+  margin: 0 0 8px;
+  font-size: 18px;
+}
+
+.status-panel p {
+  margin: 0;
+}
+
+.error-text {
+  color: #b91c1c;
+}
+
+.storage-summary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr)) auto;
+  gap: 12px;
+  align-items: stretch;
+  padding: 14px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.storage-summary div {
+  display: grid;
+  gap: 4px;
+}
+
+.storage-summary span {
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.storage-summary strong {
+  font-size: 16px;
+}
+
+.storage-summary button,
+td button {
+  align-self: center;
+  padding: 8px 10px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  background: #ffffff;
+  color: #111827;
+}
+
+.queue-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  color: #475569;
+  font-size: 13px;
+}
+
+.queue-summary span {
+  padding: 4px 8px;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  background: #ffffff;
+}
+
+.upload-panel,
+.playback-panel {
+  display: grid;
+  gap: 14px;
+  padding: 16px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.upload-panel-heading,
+.playback-panel-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.upload-panel-heading h3,
+.playback-panel-heading h3 {
+  margin: 0 0 4px;
+  font-size: 18px;
+}
+
+.upload-panel-heading p,
+.playback-panel-heading p {
+  margin: 0;
+  color: #64748b;
+}
+
+.upload-grid {
+  display: grid;
+  grid-template-columns: minmax(220px, 1.3fr) minmax(180px, 1fr) minmax(140px, 0.7fr) minmax(96px, 0.4fr);
+  gap: 12px;
+}
+
+.upload-grid label {
+  display: grid;
+  gap: 6px;
+}
+
+.upload-grid span {
+  color: #475569;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.upload-grid input,
+.upload-grid select {
+  min-width: 0;
+  width: 100%;
+  padding: 9px 10px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  background: #ffffff;
+  color: #111827;
+}
+
+.upload-panel button,
+.playback-panel button {
+  padding: 8px 10px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  background: #ffffff;
+  color: #111827;
+}
+
+.upload-progress {
+  display: grid;
+  grid-template-columns: minmax(140px, auto) 1fr auto;
+  gap: 10px;
+  align-items: center;
+  color: #475569;
+  font-size: 13px;
+}
+
+.upload-progress progress {
+  width: 100%;
+  height: 10px;
+}
+
+.offline-status {
+  display: inline-block;
+  margin-left: 10px;
+  color: #64748b;
+  font-size: 13px;
+}
+
+.offline-status-downloaded {
+  color: #047857;
+}
+
+.offline-status-stale {
+  color: #b45309;
+}
+
+.offline-status-not_downloaded {
+  color: #64748b;
+}
+
+.table-wrap {
+  overflow-x: auto;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th,
+td {
+  padding: 12px 14px;
+  border-bottom: 1px solid #e5e7eb;
+  text-align: left;
+}
+
+th {
+  color: #475569;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+tr:last-child td {
+  border-bottom: 0;
+}
+
+.health-list {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+}
+
+.health-list div {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.health-list dt {
+  color: #64748b;
+}
+
+.health-list dd {
+  margin: 0;
+  font-weight: 700;
+}
+
+.media-player {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+}
+
+.media-player video,
+.media-player img,
+.media-player audio,
+.media-player iframe {
+  display: block;
+  width: 100%;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: #111827;
+}
+
+.media-player video {
+  aspect-ratio: 16 / 9;
+}
+
+.media-player img {
+  height: auto;
+  background: #ffffff;
+}
+
+.media-player audio {
+  padding: 12px;
+  background: #ffffff;
+}
+
+.media-player iframe {
+  min-height: 640px;
+  background: #ffffff;
+}
+
+.media-player figcaption {
+  color: #64748b;
+  font-size: 13px;
+}
+
+@media (max-width: 640px) {
+  .app-header {
+    align-items: flex-start;
+    flex-direction: column;
+    padding: 18px;
+  }
+
+  .app-main {
+    padding: 20px 18px;
+  }
+
+  .page-heading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .storage-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .upload-panel-heading,
+  .playback-panel-heading {
+    flex-direction: column;
+  }
+
+  .upload-grid,
+  .upload-progress {
+    grid-template-columns: 1fr;
+  }
+
+  .media-player iframe {
+    min-height: 420px;
+  }
+}

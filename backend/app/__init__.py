@@ -1,0 +1,2 @@
+"""FieldTrix backend application package."""
+
