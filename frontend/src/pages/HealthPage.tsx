@@ -13,6 +13,10 @@ export function HealthPage() {
     return <ErrorState message={healthQuery.error.message} />;
   }
 
+  if (!healthQuery.data) {
+    return <ErrorState message="Health response was empty." />;
+  }
+
   return (
     <section className="page-section">
       <div className="page-heading">
@@ -28,4 +32,3 @@ export function HealthPage() {
     </section>
   );
 }
-

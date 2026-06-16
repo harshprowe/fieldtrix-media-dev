@@ -1,4 +1,4 @@
-import type { MediaRead } from "../../api/media";
+import { requestMediaPlaybackUrl, type MediaRead } from "../../api/media";
 import {
   mediaStorageService,
   type MediaStorageService,
@@ -28,6 +28,7 @@ const DEFAULT_CHUNK_SIZE_BYTES = 8 * 1024 * 1024;
 
 type DownloadDependencies = {
   fetcher: typeof fetch;
+  resolvePlaybackUrl: typeof requestMediaPlaybackUrl;
   cacheStorage: CacheStorage;
   metadataStorage: MediaStorageService;
   storageManager: StorageManagerService;
@@ -58,6 +59,7 @@ function assertStorageResult<T>(result: StorageResult<T>, message: string): T {
 
 export class MediaDownloadManager implements MediaDownloadManagerPort {
   private readonly fetcher: typeof fetch;
+  private readonly resolvePlaybackUrl: typeof requestMediaPlaybackUrl;
   private readonly cacheStorage: CacheStorage;
   private readonly metadataStorage: MediaStorageService;
   private readonly storageManager: StorageManagerService;
@@ -69,6 +71,7 @@ export class MediaDownloadManager implements MediaDownloadManagerPort {
     }
 
     this.fetcher = dependencies?.fetcher ?? fetch.bind(globalThis);
+    this.resolvePlaybackUrl = dependencies?.resolvePlaybackUrl ?? requestMediaPlaybackUrl;
     this.cacheStorage = dependencies?.cacheStorage ?? caches;
     this.metadataStorage = dependencies?.metadataStorage ?? mediaStorageService;
     this.storageManager = dependencies?.storageManager ?? storageManagerService;
@@ -165,6 +168,8 @@ export class MediaDownloadManager implements MediaDownloadManagerPort {
       this.createProgress(media, downloadedBytes, media.file_size, "downloading", downloadedBytes > 0)
     );
 
+    const playbackUrl = await this.getPlaybackUrl(media);
+
     for (let start = 0; start < media.file_size; start += this.chunkSizeBytes) {
       const end = Math.min(start + this.chunkSizeBytes - 1, media.file_size - 1);
       const chunkKey = toChunkCacheKey(media, start, end);
@@ -172,7 +177,7 @@ export class MediaDownloadManager implements MediaDownloadManagerPort {
         continue;
       }
 
-      const response = await this.fetchChunk(media, start, end, options);
+      const response = await this.fetchChunk(media, playbackUrl, start, end, options);
       if (response.status === 200 && start === 0) {
         const fullBytes = await this.readFullResponseToCache({
           media,
@@ -194,7 +199,7 @@ export class MediaDownloadManager implements MediaDownloadManagerPort {
         await chunkCache.put(
           chunkKey,
           new Response(chunkBlob, {
-            status: 206,
+            status: 200,
             headers: this.buildChunkHeaders(response, start, end)
           })
         );
@@ -224,12 +229,13 @@ export class MediaDownloadManager implements MediaDownloadManagerPort {
 
   private async fetchChunk(
     media: MediaRead,
+    playbackUrl: string,
     start: number,
     end: number,
     options: MediaDownloadOptions
   ): Promise<Response> {
     try {
-      return await this.fetcher(media.cdn_url, {
+      return await this.fetcher(playbackUrl, {
         signal: options.signal,
         headers: {
           Range: `bytes=${start}-${end}`
@@ -300,7 +306,7 @@ export class MediaDownloadManager implements MediaDownloadManagerPort {
         }
       }
 
-      const responseToCache = new Response(new Blob(chunks), {
+      const responseToCache = new Response(new Blob(chunks.map((chunk) => chunk.slice().buffer)), {
         status: 200,
         headers: this.buildCachedResponseHeaders(response, media)
       });
@@ -406,6 +412,18 @@ export class MediaDownloadManager implements MediaDownloadManagerPort {
       throw new MediaDownloadError(
         check.reason ?? "This download exceeds the offline storage budget.",
         "quota_exceeded"
+      );
+    }
+  }
+
+  private async getPlaybackUrl(media: MediaRead): Promise<string> {
+    try {
+      const playback = await this.resolvePlaybackUrl(media.id);
+      return playback.playback_url;
+    } catch (error) {
+      throw new MediaDownloadError(
+        error instanceof Error ? error.message : "Unable to resolve playback URL",
+        "network_error"
       );
     }
   }

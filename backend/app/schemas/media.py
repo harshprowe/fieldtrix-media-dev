@@ -12,7 +12,7 @@ class MediaMetadataBase(BaseModel):
     title: str = Field(min_length=1, max_length=255)
     media_type: MediaType
     object_key: str = Field(min_length=1, max_length=1024)
-    cdn_url: str = Field(min_length=1, max_length=2048)
+    cdn_url: str | None = Field(default=None, min_length=1, max_length=2048)
     version: int = Field(default=1, ge=1)
     file_size: int = Field(ge=0)
 
@@ -39,9 +39,15 @@ class MediaUploadUrlResponse(BaseModel):
     version: int
     upload_url: str
     object_key: str
-    cdn_url: str | None
     expires_in: int
     required_headers: dict[str, str]
+
+
+class MediaPlaybackUrlResponse(BaseModel):
+    media_id: uuid.UUID
+    version: int
+    playback_url: str
+    expires_in: int
 
 
 class MediaUpdate(BaseModel):
@@ -53,10 +59,14 @@ class MediaUpdate(BaseModel):
     file_size: int | None = Field(default=None, ge=0)
 
 
-class MediaRead(MediaMetadataBase):
+class MediaRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: uuid.UUID
+    title: str
+    media_type: MediaType
+    version: int
+    file_size: int
     created_at: datetime
     updated_at: datetime
 

@@ -8,18 +8,16 @@ export function getMediaVersionIdentity(media: Pick<MediaRead, "id" | "version">
 }
 
 export function getVersionedMediaCacheKey(
-  media: Pick<MediaRead, "id" | "version" | "cdn_url">
+  media: Pick<MediaRead, "id" | "version">
 ): string {
-  const url = new URL(
+  return new URL(
     `${CACHE_PATH_PREFIX}/${encodeURIComponent(media.id)}/v${media.version}`,
     CACHE_ORIGIN
-  );
-  url.searchParams.set("source", media.cdn_url);
-  return url.toString();
+  ).toString();
 }
 
 export function getVersionedMediaChunkCacheKey(
-  media: Pick<MediaRead, "id" | "version" | "cdn_url">,
+  media: Pick<MediaRead, "id" | "version">,
   start: number,
   end: number
 ): string {

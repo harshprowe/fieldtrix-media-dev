@@ -1,6 +1,6 @@
-import { QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 
+import { FieldTrixMediaProvider } from "./fieldtrix";
 import { queryClient } from "./services/queryClient";
 
 type AppProvidersProps = {
@@ -8,6 +8,5 @@ type AppProvidersProps = {
 };
 
 export function AppProviders({ children }: AppProvidersProps) {
-  return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>;
+  return <FieldTrixMediaProvider queryClient={queryClient}>{children}</FieldTrixMediaProvider>;
 }
-

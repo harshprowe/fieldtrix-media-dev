@@ -13,6 +13,7 @@ from app.schemas.media import (
     MediaUploadUrlRequest,
 )
 from app.services.r2_storage_service import (
+    PresignedDownload,
     PresignedUpload,
     R2ConfigurationError,
     R2PresignError,
@@ -26,7 +27,7 @@ class MediaEntity(Protocol):
     title: str
     media_type: MediaType
     object_key: str
-    cdn_url: str
+    cdn_url: str | None
     version: int
     file_size: int
     created_at: datetime
@@ -121,6 +122,20 @@ class MediaService:
             raise MediaUploadUrlError(str(exc)) from exc
         except (R2ConfigurationError, R2PresignError) as exc:
             raise MediaStorageUnavailableError(str(exc)) from exc
+
+    async def generate_playback_url(self, media_id: uuid.UUID) -> tuple[MediaEntity, PresignedDownload] | None:
+        media = await self._repository.get(media_id)
+        if media is None:
+            return None
+
+        try:
+            playback = self._storage_service.generate_download_url(object_key=media.object_key)
+        except R2UploadValidationError as exc:
+            raise MediaUploadUrlError(str(exc)) from exc
+        except (R2ConfigurationError, R2PresignError) as exc:
+            raise MediaStorageUnavailableError(str(exc)) from exc
+
+        return media, playback
 
     async def create_media(self, media_create: MediaCreate) -> MediaEntity:
         media_id = media_create.id or self._extract_media_id_from_object_key(media_create.object_key)

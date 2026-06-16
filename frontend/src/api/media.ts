@@ -6,8 +6,6 @@ export type MediaRead = {
   id: string;
   title: string;
   media_type: MediaType;
-  object_key: string;
-  cdn_url: string;
   version: number;
   file_size: number;
   created_at: string;
@@ -34,7 +32,6 @@ export type MediaUploadUrlResponse = {
   version: number;
   upload_url: string;
   object_key: string;
-  cdn_url: string | null;
   expires_in: number;
   required_headers: Record<string, string>;
 };
@@ -44,10 +41,17 @@ export type MediaCreate = {
   title: string;
   media_type: MediaType;
   object_key: string;
-  cdn_url: string;
+  cdn_url?: string | null;
   version: number;
   file_size: number;
   content_type: string;
+};
+
+export type MediaPlaybackUrlResponse = {
+  media_id: string;
+  version: number;
+  playback_url: string;
+  expires_in: number;
 };
 
 export function listMedia(params: { limit?: number; offset?: number } = {}) {
@@ -73,5 +77,11 @@ export function createMedia(payload: MediaCreate) {
   return apiRequest<MediaRead>("/media", {
     method: "POST",
     body: payload
+  });
+}
+
+export function requestMediaPlaybackUrl(mediaId: string) {
+  return apiRequest<MediaPlaybackUrlResponse>(`/media/${mediaId}/playback-url`, {
+    method: "POST"
   });
 }

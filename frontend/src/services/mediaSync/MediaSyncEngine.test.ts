@@ -10,8 +10,6 @@ function makeMedia(id: string, version: number): MediaRead {
     id,
     title: `Media ${id}`,
     media_type: "video",
-    object_key: `media/${id}/v${version}/video.mp4`,
-    cdn_url: `https://cdn.example.com/media/${id}/v${version}/video.mp4`,
     version,
     file_size: 1024,
     created_at: "2026-06-05T00:00:00.000Z",

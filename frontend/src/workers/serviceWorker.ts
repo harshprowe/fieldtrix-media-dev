@@ -13,11 +13,9 @@ import { CacheFirst, StaleWhileRevalidate } from "workbox-strategies";
 
 declare const self: ServiceWorkerGlobalScope;
 
-declare global {
-  interface ServiceWorkerGlobalScope {
-    __WB_MANIFEST: Array<{ revision: string | null; url: string }>;
-  }
-}
+type BackgroundSyncEvent = ExtendableEvent & {
+  tag: string;
+};
 
 const CACHE_VERSION = "v1";
 const CACHE_PREFIX = "fieldtrix";
@@ -119,12 +117,13 @@ self.addEventListener("activate", (event) => {
   );
 });
 
-self.addEventListener("sync", (event) => {
-  if (event.tag !== ANALYTICS_SYNC_TAG) {
+self.addEventListener("sync", (event: Event) => {
+  const syncEvent = event as BackgroundSyncEvent;
+  if (syncEvent.tag !== ANALYTICS_SYNC_TAG) {
     return;
   }
 
-  event.waitUntil(
+  syncEvent.waitUntil(
     self.clients
       .matchAll({ type: "window", includeUncontrolled: true })
       .then((clients) => {

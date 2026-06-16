@@ -102,7 +102,7 @@ function MediaPreview({ media }: { media: MediaRead }) {
   if (media.media_type === "audio") {
     return <AudioPlayer media={media} />;
   }
-  if (media.media_type === "document" && media.cdn_url.toLowerCase().includes(".pdf")) {
+  if (media.media_type === "document") {
     return <OfflinePdfViewer media={media} />;
   }
 

@@ -12,8 +12,6 @@ function makeMedia(overrides: Partial<MediaRead> = {}): MediaRead {
     id: "media-1",
     title: "Launch Screen",
     media_type: "image",
-    object_key: "media/media-1/v1/launch.png",
-    cdn_url: "https://cdn.example.com/media/media-1/v1/launch.png",
     version: 1,
     file_size: 1024,
     created_at: "2026-06-05T00:00:00.000Z",
@@ -81,6 +79,7 @@ describe("OfflinePlaybackService", () => {
     const service = new OfflinePlaybackService({
       cacheStorage: cacheStorage as unknown as CacheStorage,
       healthService: makeHealthService(media, MediaHealthStatus.DOWNLOADED),
+      resolvePlaybackUrl: vi.fn(),
       urlFactory: {
         createObjectURL: () => "blob:fieldtrix-media",
         revokeObjectURL
@@ -118,6 +117,7 @@ describe("OfflinePlaybackService", () => {
     const service = new OfflinePlaybackService({
       cacheStorage: cacheStorage as unknown as CacheStorage,
       healthService: makeHealthService(media, MediaHealthStatus.DOWNLOADED),
+      resolvePlaybackUrl: vi.fn(),
       urlFactory: {
         createObjectURL: () => "blob:fieldtrix-media",
         revokeObjectURL: vi.fn()
@@ -140,10 +140,17 @@ describe("OfflinePlaybackService", () => {
     }
   });
 
-  it("falls back to CDN when media is not cached", async () => {
+  it("falls back to a signed CDN URL when media is not cached", async () => {
+    const resolvePlaybackUrl = vi.fn(async () => ({
+      media_id: "media-1",
+      version: 1,
+      playback_url: "https://signed.example.com/media",
+      expires_in: 900
+    }));
     const service = new OfflinePlaybackService({
       cacheStorage: new FakeCacheStorage() as unknown as CacheStorage,
       healthService: makeHealthService(makeMedia(), MediaHealthStatus.NOT_DOWNLOADED),
+      resolvePlaybackUrl,
       logger: {
         debug: vi.fn(),
         info: vi.fn(),
@@ -156,7 +163,8 @@ describe("OfflinePlaybackService", () => {
     const source = await service.resolvePlaybackSource(media);
 
     expect(source.playback_source).toBe(PlaybackSource.CDN);
-    expect(source.url).toBe(media.cdn_url);
+    expect(source.url).toBe("https://signed.example.com/media");
     expect(source.objectUrl).toBeNull();
+    expect(resolvePlaybackUrl).toHaveBeenCalledWith(media.id);
   });
 });

@@ -13,7 +13,7 @@ from starlette.responses import Response
 from structlog.types import EventDict
 
 from app.core.config import settings
-from app.core.metrics import record_request_metrics
+from app.core.metrics import is_media_playback_backend_hit, record_request_metrics
 
 logger = structlog.get_logger("fieldtrix")
 
@@ -58,6 +58,17 @@ class LoggingMiddleware(BaseHTTPMiddleware):
             status_code = response.status_code if response is not None else 500
             endpoint = _resolve_endpoint_name(request)
             path = request.url.path
+            playback_backend_hit = is_media_playback_backend_hit(
+                method=request.method,
+                path=path,
+                accept_header=request.headers.get("accept"),
+            )
+            request_purpose = _classify_request_purpose(
+                method=request.method,
+                path=path,
+                endpoint=endpoint,
+                playback_backend_hit=playback_backend_hit,
+            )
             record_request_metrics(
                 method=request.method,
                 endpoint=endpoint,
@@ -71,6 +82,9 @@ class LoggingMiddleware(BaseHTTPMiddleware):
                 method=request.method,
                 path=path,
                 endpoint=endpoint,
+                request_purpose=request_purpose,
+                backend_hit_type=_classify_backend_hit_type(request_purpose),
+                is_media_playback_backend_hit=playback_backend_hit,
                 query=str(request.url.query) or None,
                 status_code=status_code,
                 duration_ms=duration_ms,
@@ -86,3 +100,47 @@ def _resolve_endpoint_name(request: Request) -> str:
     if isinstance(path, str):
         return path
     return "unmatched"
+
+
+def _classify_backend_hit_type(request_purpose: str) -> str:
+    if request_purpose == "media_playback_backend_hit":
+        return "unexpected_playback"
+    if request_purpose in {"media_cdn_upload_url", "media_metadata_create", "media_metadata_read"}:
+        return "expected_metadata"
+    if request_purpose in {"health_check", "metrics_scrape"}:
+        return "observability"
+    if request_purpose == "auth":
+        return "authentication"
+    return "other"
+
+
+def _classify_request_purpose(
+    *,
+    method: str,
+    path: str,
+    endpoint: str,
+    playback_backend_hit: bool,
+) -> str:
+    if playback_backend_hit:
+        return "media_playback_backend_hit"
+
+    normalized_method = method.upper()
+    normalized_path = path.rstrip("/")
+
+    if normalized_path.endswith("/metrics"):
+        return "metrics_scrape"
+    if "/health" in normalized_path:
+        return "health_check"
+    if "/auth" in normalized_path:
+        return "auth"
+    if normalized_path.endswith("/media/upload-url") and normalized_method == "POST":
+        return "media_cdn_upload_url"
+    if normalized_path.endswith("/media") and normalized_method == "POST":
+        return "media_metadata_create"
+    if "/media" in normalized_path and normalized_method in {"GET", "HEAD"}:
+        return "media_metadata_read"
+    if "/media" in normalized_path and normalized_method in {"PATCH", "DELETE"}:
+        return "media_metadata_write"
+    if endpoint == "unmatched":
+        return "unmatched"
+    return "api_request"

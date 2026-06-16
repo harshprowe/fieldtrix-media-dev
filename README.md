@@ -21,15 +21,15 @@ Backend
   Prometheus metrics
 
 Storage
-  Cloudflare R2
-  Cloudflare CDN / public R2 URL
+  Private Cloudflare R2
+  Short-lived signed playback URLs
 ```
 
 Core rules:
 
 - FastAPI never proxies media files.
 - Uploads go directly from browser to R2 using presigned URLs.
-- Playback uses local cache first, then CDN fallback.
+- Playback uses local cache first, then a short-lived signed R2 URL fallback.
 - PostgreSQL stores metadata only.
 - Offline playback must not call backend APIs.
 
@@ -62,6 +62,103 @@ frontend/
 cloudflare/
   r2-cors.dev.json
 ```
+
+## Reusing In An Existing Codebase
+
+FieldTrix is split so the media delivery workflow can be embedded into another application without using this demo app shell.
+
+### Backend Integration
+
+For an existing FastAPI backend, mount only the media API:
+
+```python
+from fastapi import FastAPI
+from app.integration import mount_fieldtrix_media
+
+app = FastAPI()
+
+mount_fieldtrix_media(
+    app,
+    prefix="/api/v1/media",
+)
+```
+
+If your company already has its own database/session/storage wiring, provide a custom service factory:
+
+```python
+from sqlalchemy.ext.asyncio import AsyncSession
+from app.integration import mount_fieldtrix_media
+from app.repositories.media_repository import MediaRepository
+from app.services.media_service import MediaService
+from app.services.r2_storage_service import R2StorageService
+
+def create_company_media_service(session: AsyncSession) -> MediaService:
+    return MediaService(
+        repository=MediaRepository(session),
+        storage_service=R2StorageService(),
+    )
+
+mount_fieldtrix_media(
+    app,
+    prefix="/api/media",
+    media_service_factory=create_company_media_service,
+)
+```
+
+The reusable backend boundary is:
+
+```text
+app.integration.mount_fieldtrix_media
+app.services.media_service.MediaService
+app.repositories.media_repository.MediaRepository
+app.services.r2_storage_service.R2StorageService
+```
+
+### Frontend Integration
+
+Existing React apps can use the FieldTrix provider and hooks without using this repository's router/layout:
+
+```tsx
+import {
+  FieldTrixMediaProvider,
+  useMediaList,
+  useMediaUpload,
+  useMediaDownload,
+} from "./fieldtrix";
+
+function CompanyApp() {
+  return (
+    <FieldTrixMediaProvider
+      api={{
+        apiBaseUrl: "https://api.company.com/api/v1",
+        getAccessToken: () => companyAuth.getAccessToken(),
+      }}
+    >
+      <CompanyMediaPage />
+    </FieldTrixMediaProvider>
+  );
+}
+```
+
+The reusable frontend boundary is:
+
+```text
+frontend/src/fieldtrix.tsx
+frontend/src/api/*
+frontend/src/hooks/*
+frontend/src/services/media*
+frontend/src/storage/mediaStorageService.ts
+frontend/src/components/media/*
+```
+
+The host application owns:
+
+- authentication UX
+- route layout
+- design system
+- API base URL
+- token provider
+- production deployment
 
 ## Requirements
 
@@ -97,7 +194,6 @@ R2_ACCOUNT_ID=<cloudflare-account-id>
 R2_ACCESS_KEY_ID=<r2-access-key-id>
 R2_SECRET_ACCESS_KEY=<r2-secret-access-key>
 R2_BUCKET_NAME=<bucket-name>
-R2_PUBLIC_BASE_URL=<public-r2-url-or-cdn-url>
 R2_REGION_NAME=auto
 ```
 
@@ -172,12 +268,6 @@ fieldtrix-media-dev
 
 Create an R2 Account API token with object read/write access scoped to that bucket.
 
-Enable a public development URL or configure a custom domain. Use that as:
-
-```env
-R2_PUBLIC_BASE_URL=https://pub-xxxxxxxxxxxxxxxx.r2.dev
-```
-
 Apply browser upload CORS:
 
 ```powershell
@@ -214,10 +304,23 @@ The media table supports:
 Playback behavior:
 
 - If downloaded, playback source is local cache.
-- If not downloaded, playback source is CDN.
+- If not downloaded, frontend requests a short-lived signed playback URL.
 - FastAPI is not called during playback.
+- FastAPI is only called to issue the signed URL for uncached online playback/download.
 
 Original-quality playback at low bandwidth requires downloading the file first. CDN streaming preserves the original asset, but low bandwidth may buffer.
+
+## Protected Media Model
+
+For protected media without DRM:
+
+- Keep the R2 bucket private.
+- Do not enable public `r2.dev` access for production.
+- Do not store permanent CDN URLs in IndexedDB.
+- Use `POST /media/{media_id}/playback-url` for temporary playback URLs.
+- Downloaded offline media is still accessible to a user who controls the browser profile.
+
+This prevents permanent URL sharing, but it is not DRM. If the user can play media, the browser can access the bytes.
 
 ## Tests
 

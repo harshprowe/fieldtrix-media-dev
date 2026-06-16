@@ -17,7 +17,6 @@ function makeUploadResponse(overrides: Partial<MediaUploadUrlResponse> = {}): Me
     version: 1,
     upload_url: "https://r2.example.com/signed",
     object_key: "media/3ff6c9bb-4b7f-42c7-97e7-5a4266c25fa2/v1/training.mp4",
-    cdn_url: "https://cdn.example.com/media/3ff6c9bb-4b7f-42c7-97e7-5a4266c25fa2/v1/training.mp4",
     expires_in: 900,
     required_headers: { "Content-Type": "video/mp4" },
     ...overrides
@@ -29,8 +28,6 @@ function makeMedia(payload: MediaCreate): MediaRead {
     id: payload.id ?? "3ff6c9bb-4b7f-42c7-97e7-5a4266c25fa2",
     title: payload.title,
     media_type: payload.media_type,
-    object_key: payload.object_key,
-    cdn_url: payload.cdn_url,
     version: payload.version,
     file_size: payload.file_size,
     created_at: "2026-06-09T00:00:00.000Z",
@@ -84,29 +81,12 @@ describe("MediaUploadService", () => {
       title: "Training Video",
       media_type: "video",
       object_key: uploadResponse.object_key,
-      cdn_url: uploadResponse.cdn_url,
+      cdn_url: null,
       version: uploadResponse.version,
       file_size: 11,
       content_type: "video/mp4"
     });
     expect(result.title).toBe("Training Video");
-  });
-
-  it("rejects metadata save when backend does not return a CDN URL", async () => {
-    const service = new MediaUploadService({
-      requestUploadUrl: vi.fn(async () => makeUploadResponse({ cdn_url: null })),
-      uploadFile: vi.fn(),
-      saveMedia: vi.fn()
-    });
-
-    await expect(
-      service.upload({
-        file: makeFile(),
-        title: "Training Video"
-      })
-    ).rejects.toMatchObject({
-      code: "missing_cdn_url"
-    });
   });
 
   it("validates title before requesting an upload URL", async () => {

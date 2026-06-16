@@ -16,8 +16,6 @@ function makeMetadata(
     id: "media-1",
     title: "Launch Screen",
     media_type: "image",
-    object_key: "media/media-1/v1/launch.png",
-    cdn_url: "https://cdn.example.com/media/media-1/v1/launch.png",
     version: 1,
     file_size: 1024,
     created_at: "2026-06-05T00:00:00.000Z",

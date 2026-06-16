@@ -1,9 +1,9 @@
-import { deleteDB, openDB, type DBSchema, type IDBPDatabase } from "idb";
+import { deleteDB, openDB, type DBSchema, type IDBPDatabase, type IDBPTransaction } from "idb";
 
 import type { MediaRead } from "../api/media";
 
 const DEFAULT_DB_NAME = "fieldtrix-media";
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 
 export type DownloadStatus =
   | "not_started"
@@ -26,8 +26,6 @@ export type MediaVersionRecord = {
   key: string;
   media_id: string;
   version: number;
-  object_key: string;
-  cdn_url: string;
   file_size: number;
   recorded_at: string;
 };
@@ -129,8 +127,6 @@ export class MediaStorageService {
         key: versionKey(metadata.id, metadata.version),
         media_id: metadata.id,
         version: metadata.version,
-        object_key: metadata.object_key,
-        cdn_url: metadata.cdn_url,
         file_size: metadata.file_size,
         recorded_at: timestamp
       });
@@ -267,13 +263,21 @@ export class MediaStorageService {
     }
 
     this.databasePromise ??= openDB<FieldTrixMediaDB>(this.databaseName, DB_VERSION, {
-      upgrade(database) {
-        const mediaStore = database.createObjectStore("media_metadata", { keyPath: "id" });
-        mediaStore.createIndex("by_download_status", "download_status");
-        mediaStore.createIndex("by_updated_at", "updated_at");
+      async upgrade(database, oldVersion, _newVersion, transaction) {
+        if (!database.objectStoreNames.contains("media_metadata")) {
+          const mediaStore = database.createObjectStore("media_metadata", { keyPath: "id" });
+          mediaStore.createIndex("by_download_status", "download_status");
+          mediaStore.createIndex("by_updated_at", "updated_at");
+        }
 
-        const versionsStore = database.createObjectStore("media_versions", { keyPath: "key" });
-        versionsStore.createIndex("by_media_id", "media_id");
+        if (!database.objectStoreNames.contains("media_versions")) {
+          const versionsStore = database.createObjectStore("media_versions", { keyPath: "key" });
+          versionsStore.createIndex("by_media_id", "media_id");
+        }
+
+        if (oldVersion < 2) {
+          await removeSensitiveUrlFields(transaction);
+        }
       }
     });
 
@@ -282,3 +286,27 @@ export class MediaStorageService {
 }
 
 export const mediaStorageService = new MediaStorageService();
+
+async function removeSensitiveUrlFields(
+  transaction: IDBPTransaction<FieldTrixMediaDB, ["media_metadata", "media_versions"], "versionchange">
+): Promise<void> {
+  const metadataStore = transaction.objectStore("media_metadata");
+  let metadataCursor = await metadataStore.openCursor();
+  while (metadataCursor) {
+    const nextValue = { ...metadataCursor.value } as StoredMediaMetadata & Record<string, unknown>;
+    delete nextValue.cdn_url;
+    delete nextValue.object_key;
+    await metadataCursor.update(nextValue);
+    metadataCursor = await metadataCursor.continue();
+  }
+
+  const versionsStore = transaction.objectStore("media_versions");
+  let versionCursor = await versionsStore.openCursor();
+  while (versionCursor) {
+    const nextValue = { ...versionCursor.value } as MediaVersionRecord & Record<string, unknown>;
+    delete nextValue.cdn_url;
+    delete nextValue.object_key;
+    await versionCursor.update(nextValue);
+    versionCursor = await versionCursor.continue();
+  }
+}

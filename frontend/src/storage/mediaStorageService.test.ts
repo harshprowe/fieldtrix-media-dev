@@ -10,8 +10,6 @@ function makeMedia(overrides: Partial<MediaRead> = {}): MediaRead {
     id: "media-1",
     title: "Launch Screen",
     media_type: "image",
-    object_key: "media/media-1/v1/launch.png",
-    cdn_url: "https://cdn.example.com/media/media-1/v1/launch.png",
     version: 1,
     file_size: 1024,
     created_at: "2026-06-05T00:00:00.000Z",
@@ -50,8 +48,6 @@ describe("MediaStorageService", () => {
     await service.saveMediaMetadata(
       makeMedia({
         version: 2,
-        object_key: "media/media-1/v2/launch.png",
-        cdn_url: "https://cdn.example.com/media/media-1/v2/launch.png",
         file_size: 2048
       })
     );
@@ -63,10 +59,8 @@ describe("MediaStorageService", () => {
       return;
     }
     expect(history.data.map((item) => item.version)).toEqual([2, 1]);
-    expect(history.data.map((item) => item.object_key)).toEqual([
-      "media/media-1/v2/launch.png",
-      "media/media-1/v1/launch.png"
-    ]);
+    expect(history.data.map((item) => "object_key" in item)).toEqual([false, false]);
+    expect(history.data.map((item) => "cdn_url" in item)).toEqual([false, false]);
   });
 
   it("treats a changed version as a new local asset", async () => {
@@ -78,9 +72,7 @@ describe("MediaStorageService", () => {
 
     const saved = await service.saveMediaMetadata(
       makeMedia({
-        version: 2,
-        object_key: "media/media-1/v2/launch.png",
-        cdn_url: "https://cdn.example.com/media/media-1/v2/launch.png"
+        version: 2
       })
     );
 

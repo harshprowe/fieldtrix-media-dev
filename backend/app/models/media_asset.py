@@ -32,6 +32,6 @@ class MediaAsset(Base, TimestampMixin):
         nullable=False,
     )
     object_key: Mapped[str] = mapped_column(String(1024), nullable=False)
-    cdn_url: Mapped[str] = mapped_column(String(2048), nullable=False)
+    cdn_url: Mapped[str | None] = mapped_column(String(2048), nullable=True)
     version: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
     file_size: Mapped[int] = mapped_column(BigInteger, nullable=False)

@@ -37,7 +37,6 @@ export class MediaUploadError extends Error {
       | "invalid_file"
       | "invalid_title"
       | "unsupported_type"
-      | "missing_cdn_url"
       | "r2_upload_failed"
       | "metadata_save_failed"
   ) {
@@ -73,13 +72,6 @@ export class MediaUploadService {
       version
     });
 
-    if (!upload.cdn_url) {
-      throw new MediaUploadError(
-        "R2 public base URL is not configured. Set R2_PUBLIC_BASE_URL before uploading media.",
-        "missing_cdn_url"
-      );
-    }
-
     await this.uploadFile({
       file: request.file,
       upload,
@@ -97,7 +89,7 @@ export class MediaUploadService {
         title,
         media_type: mediaType,
         object_key: upload.object_key,
-        cdn_url: upload.cdn_url,
+        cdn_url: null,
         version: upload.version,
         file_size: request.file.size,
         content_type: contentType

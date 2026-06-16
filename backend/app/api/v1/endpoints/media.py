@@ -8,6 +8,7 @@ from app.api.deps import get_media_service
 from app.schemas.media import (
     MediaCreate,
     MediaList,
+    MediaPlaybackUrlResponse,
     MediaRead,
     MediaUpdate,
     MediaUploadUrlRequest,
@@ -59,9 +60,35 @@ async def create_media_upload_url(
         version=upload.version,
         upload_url=upload.upload_url,
         object_key=upload.object_key,
-        cdn_url=upload.cdn_url,
         expires_in=upload.expires_in,
         required_headers=upload.required_headers,
+    )
+
+
+@router.post("/{media_id}/playback-url", response_model=MediaPlaybackUrlResponse)
+async def create_media_playback_url(
+    media_id: uuid.UUID,
+    service: MediaService = Depends(get_media_service),
+) -> MediaPlaybackUrlResponse:
+    try:
+        result = await service.generate_playback_url(media_id)
+    except MediaUploadUrlError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+    except MediaStorageUnavailableError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=str(exc),
+        ) from exc
+
+    if result is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Media asset not found")
+
+    media, playback = result
+    return MediaPlaybackUrlResponse(
+        media_id=media.id,
+        version=media.version,
+        playback_url=playback.download_url,
+        expires_in=playback.expires_in,
     )
 
 

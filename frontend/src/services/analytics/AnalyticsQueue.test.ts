@@ -11,8 +11,6 @@ function makeMedia(overrides: Partial<MediaRead> = {}): MediaRead {
     id: "media-1",
     title: "Launch Screen",
     media_type: "video",
-    object_key: "media/media-1/v1/video.mp4",
-    cdn_url: "https://cdn.example.com/media/media-1/v1/video.mp4",
     version: 1,
     file_size: 1024,
     created_at: "2026-06-05T00:00:00.000Z",

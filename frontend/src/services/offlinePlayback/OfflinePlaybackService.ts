@@ -1,4 +1,5 @@
 import type { MediaRead } from "../../api/media";
+import { requestMediaPlaybackUrl } from "../../api/media";
 import {
   OfflinePlaybackError,
   PlaybackSource,
@@ -17,15 +18,20 @@ const MEDIA_CACHE_NAME = "fieldtrix-media-v1";
 type OfflinePlaybackDependencies = {
   cacheStorage: CacheStorage;
   healthService: MediaHealthServicePort;
+  resolvePlaybackUrl: typeof requestMediaPlaybackUrl;
   urlFactory: Pick<typeof URL, "createObjectURL" | "revokeObjectURL">;
   logger: Pick<Console, "debug" | "info" | "warn" | "error">;
 };
 
-function createCdnSource(media: MediaRead): ResolvedPlaybackSource {
+async function createSignedCdnSource(
+  media: MediaRead,
+  resolvePlaybackUrl: typeof requestMediaPlaybackUrl
+): Promise<ResolvedPlaybackSource> {
+  const playback = await resolvePlaybackUrl(media.id);
   return {
     media,
     playback_source: PlaybackSource.CDN,
-    url: media.cdn_url,
+    url: playback.playback_url,
     objectUrl: null,
     contentType: null,
     revoke: () => undefined
@@ -35,12 +41,14 @@ function createCdnSource(media: MediaRead): ResolvedPlaybackSource {
 export class OfflinePlaybackService implements OfflinePlaybackServicePort {
   private readonly cacheStorage?: CacheStorage;
   private readonly healthService: MediaHealthServicePort;
+  private readonly resolvePlaybackUrl: typeof requestMediaPlaybackUrl;
   private readonly urlFactory: Pick<typeof URL, "createObjectURL" | "revokeObjectURL">;
   private readonly logger: Pick<Console, "debug" | "info" | "warn" | "error">;
 
   constructor(dependencies?: Partial<OfflinePlaybackDependencies>) {
     this.cacheStorage = dependencies?.cacheStorage ?? globalThis.caches;
     this.healthService = dependencies?.healthService ?? mediaHealthService;
+    this.resolvePlaybackUrl = dependencies?.resolvePlaybackUrl ?? requestMediaPlaybackUrl;
     this.urlFactory = dependencies?.urlFactory ?? URL;
     this.logger = dependencies?.logger ?? console;
   }
@@ -49,8 +57,7 @@ export class OfflinePlaybackService implements OfflinePlaybackServicePort {
     this.logger.info("[OfflinePlaybackService] playback opened", {
       mediaId: media.id,
       mediaVersion: media.version,
-      mediaIdentity: getMediaVersionIdentity(media),
-      cdnUrl: media.cdn_url
+      mediaIdentity: getMediaVersionIdentity(media)
     });
 
     if (!this.cacheStorage) {
@@ -58,7 +65,7 @@ export class OfflinePlaybackService implements OfflinePlaybackServicePort {
         mediaId: media.id,
         playback_source: PlaybackSource.CDN
       });
-      return createCdnSource(media);
+      return createSignedCdnSource(media, this.resolvePlaybackUrl);
     }
 
     const health = await this.healthService.verifyMedia(media.id);
@@ -69,7 +76,7 @@ export class OfflinePlaybackService implements OfflinePlaybackServicePort {
         healthStatus: health.status,
         playback_source: PlaybackSource.CDN
       });
-      return createCdnSource(media);
+      return createSignedCdnSource(media, this.resolvePlaybackUrl);
     }
 
     let cachedResponse: Response | undefined;
@@ -82,7 +89,7 @@ export class OfflinePlaybackService implements OfflinePlaybackServicePort {
         playback_source: PlaybackSource.CDN,
         error
       });
-      return createCdnSource(media);
+      return createSignedCdnSource(media, this.resolvePlaybackUrl);
     }
 
     if (!cachedResponse) {
@@ -91,7 +98,7 @@ export class OfflinePlaybackService implements OfflinePlaybackServicePort {
         mediaVersion: media.version,
         playback_source: PlaybackSource.CDN
       });
-      return createCdnSource(media);
+      return createSignedCdnSource(media, this.resolvePlaybackUrl);
     }
 
     try {

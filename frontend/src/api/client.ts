@@ -1,5 +1,4 @@
-import { env } from "../services/env";
-import { getAccessToken } from "../storage/authTokenStorage";
+import { getFieldTrixApiConfig } from "./config";
 import { ApiError } from "./errors";
 
 type ApiRequestOptions = Omit<RequestInit, "body"> & {
@@ -22,8 +21,9 @@ export async function apiRequest<TResponse>(
   path: string,
   options: ApiRequestOptions = {}
 ): Promise<TResponse> {
+  const config = getFieldTrixApiConfig();
   const headers = new Headers(options.headers);
-  const token = getAccessToken();
+  const token = config.getAccessToken();
 
   if (options.body !== undefined && !headers.has("Content-Type")) {
     headers.set("Content-Type", "application/json");
@@ -32,7 +32,7 @@ export async function apiRequest<TResponse>(
     headers.set("Authorization", `Bearer ${token}`);
   }
 
-  const response = await fetch(`${env.apiBaseUrl}${path}`, {
+  const response = await config.fetcher(`${config.apiBaseUrl}${path}`, {
     ...options,
     headers,
     body: options.body === undefined ? undefined : JSON.stringify(options.body)
@@ -49,4 +49,3 @@ export async function apiRequest<TResponse>(
 
   return payload as TResponse;
 }
-

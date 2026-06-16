@@ -12,10 +12,15 @@
           "HEAD"
         ],
         "headers": [
-          "Content-Type"
+          "Content-Type",
+          "Range"
         ]
       },
       "exposeHeaders": [
+        "Accept-Ranges",
+        "Content-Length",
+        "Content-Range",
+        "Content-Type",
         "ETag"
       ],
       "maxAgeSeconds": 3600

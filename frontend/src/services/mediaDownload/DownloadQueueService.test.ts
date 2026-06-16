@@ -13,8 +13,6 @@ function makeMedia(index: number): MediaRead {
     id: `media-${index}`,
     title: `Media ${index}`,
     media_type: "video",
-    object_key: `media/media-${index}/v1/video.mp4`,
-    cdn_url: `https://cdn.example.com/media/media-${index}/v1/video.mp4`,
     version: 1,
     file_size: 1024,
     created_at: "2026-06-06T00:00:00.000Z",

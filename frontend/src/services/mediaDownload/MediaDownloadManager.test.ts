@@ -15,8 +15,6 @@ function makeMedia(overrides: Partial<MediaRead> = {}): MediaRead {
     id: "media-1",
     title: "Launch Screen",
     media_type: "video",
-    object_key: "media/media-1/v1/video.mp4",
-    cdn_url: "https://cdn.example.com/media/media-1/v1/video.mp4",
     version: 1,
     file_size: 12,
     created_at: "2026-06-05T00:00:00.000Z",
@@ -127,12 +125,18 @@ function makeManager(input: {
     fetcher: input.fetcher,
     cacheStorage: cacheStorage as unknown as CacheStorage,
     metadataStorage: metadataStorage as never,
-    storageManager: new StorageManagerService({
+      storageManager: new StorageManagerService({
       storageManager: {
         estimate: async () => input.quota ?? { quota: 1_000_000, usage: 0 },
         persist: async () => true,
         persisted: async () => true
       }
+    }),
+    resolvePlaybackUrl: async () => ({
+      media_id: "media-1",
+      version: 1,
+      playback_url: "https://signed.example.com/video.mp4",
+      expires_in: 900
     }),
     chunkSizeBytes: input.chunkSizeBytes ?? 4
   });
@@ -143,7 +147,8 @@ function makeManager(input: {
 describe("MediaDownloadManager", () => {
   it("downloads media from CDN and stores final bytes in Cache API", async () => {
     const media = makeMedia({ file_size: 4 });
-    const fetcher = vi.fn<typeof fetch>(async (_url, init) => {
+    const fetcher = vi.fn<typeof fetch>(async (url, init) => {
+      expect(String(url)).toBe("https://signed.example.com/video.mp4");
       const range = new Headers(init?.headers).get("Range");
       expect(range).toBe("bytes=0-3");
       return new Response(new Uint8Array([1, 2, 3, 4]), {
@@ -171,7 +176,7 @@ describe("MediaDownloadManager", () => {
     await chunkCache.put(
       getVersionedMediaChunkCacheKey(media, 0, 3),
       new Response(new Uint8Array([1, 2, 3, 4]), {
-        status: 206,
+        status: 200,
         headers: { "Content-Length": "4" }
       })
     );
